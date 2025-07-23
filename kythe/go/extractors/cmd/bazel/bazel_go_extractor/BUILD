@@ -5,7 +5,10 @@ package(default_visibility = ["//kythe:default_visibility"])
 go_binary(
     name = "bazel_go_extractor",
     srcs = ["bazel_go_extractor.go"],
-    static = "on",
+    static = select({
+        "@platforms//os:macos": "off",
+        "//conditions:default": "on",
+    }),
     deps = [
         "//kythe/go/extractors/bazel",
         "//kythe/go/extractors/govname",
