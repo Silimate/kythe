@@ -19,8 +19,15 @@ filegroup(
     srcs = glob(["**"]),
 )
 
+# Use system libffi on macOS ARM64 to avoid CFI assembly issues
+cc_library(
+    name = "libffi_system",
+    linkopts = ["-lffi"],
+    visibility = ["//visibility:public"],
+)
+
 configure_make(
-    name = "libffi",
+    name = "libffi_built",
     configure_options = [
         "--disable-multi-os-directory",
         "--disable-dependency-tracking",
@@ -29,10 +36,30 @@ configure_make(
     ] + select({
         "@bazel_tools//src/conditions:darwin_arm64": [
             "--build=aarch64-apple-darwin",
+            "--host=aarch64-apple-darwin",
+            "--disable-builddir",
         ],
         "//conditions:default": [],
+    }),
+    configure_env_vars = select({
+        "@bazel_tools//src/conditions:darwin_arm64": {
+            "CFLAGS": "-Wno-error",
+            "CPPFLAGS": "-DHAVE_AS_CFI_PSEUDO_OP=0",
+            "CCASFLAGS": "-Wa,--noexecstack",
+        },
+        "//conditions:default": {},
     }),
     lib_source = ":all_srcs",
     visibility = ["//visibility:public"],
     alwayslink = True,
+)
+
+# Use system libffi on macOS ARM64, build from source elsewhere
+alias(
+    name = "libffi",
+    actual = select({
+        "@bazel_tools//src/conditions:darwin_arm64": ":libffi_system",
+        "//conditions:default": ":libffi_built",
+    }),
+    visibility = ["//visibility:public"],
 )
