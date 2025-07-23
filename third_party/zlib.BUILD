@@ -56,6 +56,12 @@ cc_library(
     copts = [
         "-Wno-unused-variable",
         "-Wno-implicit-function-declaration",
-    ],
+    ] + select({
+        "@bazel_tools//src/conditions:darwin": [
+            # Prevent fdopen redefinition by defining it as a macro that expands to fdopen itself
+            "-Dfdopen=fdopen",
+        ],
+        "//conditions:default": [],
+    }),
     includes = ["zlib/include/"],
 )
